@@ -1,92 +1,161 @@
-# Real Estate Agent Portal
+# Zack AI Portal
 
-A full-featured AI-powered command center for solo real estate agents — functioning as Executive Assistant, Transaction Manager, and Listing Coordinator.
+AI-powered real estate command center. Clients text in → AI qualifies them → assembly-line automations fire automatically.
 
-## Features (Phase 1 + 2)
+## Stack
+- **Frontend**: React + Vite + Tailwind, deployed on Netlify
+- **Backend**: Netlify Serverless Functions (Node 20)
+- **Database**: Neon (Postgres) — source of truth for all clients
+- **AI**: Ollama (local) with Groq cloud fallback
+- **Messaging**: Bluesend (iMessage) + Twilio (SMS fallback)
+- **Email**: Resend
+- **E-signature**: DocuSign
+- **CI/CD**: GitHub → Netlify auto-deploy
 
-- **Dashboard** — Active deals, urgent tasks, upcoming deadlines, and quick AI actions at a glance
-- **Deals Manager** — Full CRUD for listings, transactions, and buyer leads with task management
-- **AI Assistant** — Three modes (Executive, Transaction, Listing) each with custom system prompts and full deal context injected
-- **Transactions** — Contingency tracking and timeline view
-- **Listings** — Listing card grid
-- **Contacts** — Client and vendor contact directory
-- **Settings** — Agent profile and API key management
-- **Persistent storage** — All data saved to localStorage
+---
+
+## What's built
+
+### Phase 1 ✅
+- Dashboard with live stats, client pipeline, recent messages, active deals, urgent tasks
+- Client list with search and stage/intent badges
+- Client detail with full conversation history, deals, and workflow run history
+- AI intake agent (Ollama + Groq fallback) — qualifies clients via text, extracts fields, triggers workflows
+- Inbound message webhook (Bluesend) with TCPA opt-out handling
+- Workflow execution engine with parallel step support
+- Full Neon schema: clients, conversations, captured_fields, skills, templates, workflows, workflow_runs, deals, tasks, skill_jobs
+
+### Phase 2 ✅
+- **Workflow builder** — visual canvas, add steps by skill type, configure prompts/messages, toggle parallel, reorder
+- **Skills manager** — view all built-in skills, record new browser skills, delete custom skills
+- **Templates editor** — write email/SMS/document templates with {{variable}} slots, live preview panel
+- Backend APIs: workflows, skills, templates (GET/POST/DELETE)
+
+---
 
 ## Setup
 
-### 1. Install dependencies
-
+### 1. Clone and install
 ```bash
+git clone https://github.com/YOUR_USERNAME/zack-ai-portal.git
+cd zack-ai-portal
 npm install
 ```
 
-### 2. Start the development server
+### 2. Create a Neon database
+Go to neon.tech → New project → copy the Connection string.
 
+### 3. Set environment variables
 ```bash
-npm start
+cp .env.example .env
+# Fill in your real keys
 ```
 
-The app opens at `http://localhost:3000`
-
-### 3. Configure your API Key
-
-Go to **Settings** in the sidebar and paste your Anthropic API key (`sk-ant-...`).  
-Get one at [console.anthropic.com](https://console.anthropic.com).
-
-Your API key is stored **only in your browser's localStorage** — never sent anywhere except directly to Anthropic.
-
-## Deployment (GitHub Pages)
-
+### 4. Run database migrations
 ```bash
-npm install --save-dev gh-pages
+npm run db:migrate
 ```
 
-Add to `package.json`:
-```json
-"homepage": "https://yourusername.github.io/realestate-portal",
-"scripts": {
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d build"
-}
-```
-
-Then:
+### 5. Start Ollama
 ```bash
-npm run deploy
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3.1
+ollama serve
 ```
 
-## Deployment (Netlify / Vercel)
-
-Just connect your GitHub repo. Both platforms auto-detect Create React App and build correctly.
-
-- Build command: `npm run build`
-- Publish directory: `build`
-
-## Project Structure
-
+Production tip — run on a VPS so it's always reachable:
+```bash
+OLLAMA_HOST=0.0.0.0 ollama serve
 ```
-src/
-├── lib/
-│   ├── AppContext.js     # Global state + persistence
-│   └── storage.js        # localStorage wrapper + seed data
-├── components/
-│   └── Sidebar.js        # Navigation sidebar
-├── pages/
-│   ├── Dashboard.js      # Main command center view
-│   ├── Deals.js          # Deal management + detail panel
-│   ├── AIChat.js         # AI assistant with mode switching
-│   ├── Transactions.js   # Transaction tracker (Phase 3 expansion)
-│   ├── Listings.js       # Listing coordinator (Phase 4 expansion)
-│   ├── Contacts.js       # Contact directory
-│   └── Settings.js       # Profile + API key
-├── App.js
-├── index.js
-└── index.css             # Design system CSS variables
+Then set OLLAMA_BASE_URL=http://YOUR_VPS_IP:11434 in Netlify env vars.
+
+### 6. Run locally
+```bash
+npm install -g netlify-cli
+netlify dev
+# http://localhost:8888
 ```
 
-## Roadmap
+---
 
-- **Phase 3** — Full transaction tracker with editable contingency timeline, checklist generation, addenda drafting
-- **Phase 4** — Listing launch checklist wizard, showing feedback tracker, social campaign builder
-- **Phase 5** — Templates library (emails, scripts, checklists) with AI auto-population
+## Deploy to Netlify
+1. Push to GitHub
+2. netlify.com → New site → Import from GitHub
+3. Build: `npm run build` · Publish: `dist`
+4. Add all env vars from .env.example
+5. Deploy — auto-deploys on every push
+
+Connect Bluesend webhook to:
+https://YOUR-SITE.netlify.app/.netlify/functions/inbound-message
+
+---
+
+## Project structure
+
+```
+zack-ai-portal/
+├── netlify/functions/
+│   ├── lib/
+│   │   ├── db.js               # Neon helpers
+│   │   ├── ai.js               # Ollama + Groq
+│   │   └── messaging.js        # Bluesend + Twilio + Resend
+│   ├── inbound-message.js      # Bluesend webhook / client intake
+│   ├── run-workflow.js         # Workflow engine (parallel steps)
+│   ├── dashboard.js            # Dashboard API
+│   ├── clients.js              # Client CRUD API
+│   ├── workflows.js            # Workflow CRUD API      [Phase 2]
+│   ├── skills.js               # Skills CRUD API        [Phase 2]
+│   └── templates.js            # Templates CRUD API     [Phase 2]
+├── src/
+│   ├── components/Layout.jsx
+│   └── pages/
+│       ├── Dashboard.jsx
+│       ├── Clients.jsx
+│       ├── ClientDetail.jsx
+│       ├── Workflows.jsx       [Phase 2]
+│       ├── Skills.jsx          [Phase 2]
+│       └── Templates.jsx       [Phase 2]
+├── sql/
+│   ├── 001_schema.sql
+│   └── 002_seed.sql
+├── .env.example
+├── netlify.toml
+└── README.md
+```
+
+---
+
+## API reference
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/dashboard | Dashboard stats |
+| GET | /api/clients | All clients |
+| GET | /api/clients?id= | Client + history |
+| POST | /api/inbound-message | Bluesend webhook |
+| POST | /api/run-workflow | Execute workflow |
+| GET/POST | /api/workflows | Workflow CRUD |
+| GET/POST/DELETE | /api/skills | Skills CRUD |
+| GET/POST/DELETE | /api/templates | Templates CRUD |
+
+---
+
+## Phase 3 (next)
+- [ ] Chrome extension for real Playwright browser recording
+- [ ] DocuSign envelope creation from document templates
+- [ ] Navica MLS pre-recorded browser skill
+- [ ] Deal management UI
+- [ ] Task manager with deadlines
+- [ ] Live workflow run monitoring
+
+---
+
+## Troubleshooting
+
+**AI not responding** — Check `ollama serve` is running and OLLAMA_BASE_URL is correct. Set GROQ_API_KEY as fallback.
+
+**Messages not arriving** — Verify Bluesend webhook points to your live Netlify function URL.
+
+**Database errors** — Check DATABASE_URL is set and `npm run db:migrate` has been run.
+
+**Build fails** — Ensure NODE_VERSION=20 is set in Netlify environment variables.
