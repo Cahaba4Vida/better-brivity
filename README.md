@@ -1,153 +1,152 @@
-# Real Estate AI Autopilot — Netlify + Neon + Ollama
+# Zack AI Portal
 
-This is a deployable MVP starter for the simple Brivity-style AI operations layer:
+AI-powered real estate command center. Clients text in → AI qualifies them → assembly-line automations fire automatically.
 
-- Netlify-hosted React dashboard
-- Netlify Functions API
-- Neon Postgres database
-- Ollama AI worker integration
-- Sendblue SMS/iMessage/RCS sending and inbound webhook
-- Resend email sending and webhook
-- DocuSign signing request scaffolding
-- Consent checks, review queue, audit log, task queue, and one-button follow-up
+## Stack
+- **Frontend**: React + Vite + Tailwind, deployed on Netlify
+- **Backend**: Netlify Serverless Functions (Node 20)
+- **Database**: Neon (Postgres) — source of truth for all clients
+- **AI**: Ollama (local) with Groq cloud fallback
+- **Messaging**: Bluesend (iMessage) + Twilio (SMS fallback)
+- **Email**: Resend
+- **E-signature**: DocuSign
+- **CI/CD**: GitHub → Netlify auto-deploy
 
-## What works immediately
+---
 
-With `ALLOW_MOCK_PROVIDERS=true`, the app can run end-to-end without live Sendblue, Resend, DocuSign, or Ollama keys:
+## Setup (do this once)
 
-1. Add leads.
-2. Run Today’s Follow-Up.
-3. Generate AI/fallback recommendations.
-4. Create review messages and tasks.
-5. Approve messages.
-6. Create signing request records.
-7. See audit activity.
-
-When real provider keys are added, the same flows call Sendblue, Resend, DocuSign, and your Ollama worker.
-
-## Important Netlify deploy note
-
-Do not rely on raw drag-and-drop for the production backend. Netlify manual deploys without continuous deployment do not run a build command, and Functions are normally bundled through Git, CLI, or API workflows.
-
-Recommended deployment:
-
-1. Unzip this folder.
-2. Push it to a GitHub repository.
-3. In Netlify, create a new project from that repo.
-4. Netlify will read `netlify.toml`, run `npm run build`, publish `dist`, and deploy `netlify/functions`.
-
-Alternative:
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/YOUR_USERNAME/zack-ai-portal.git
+cd zack-ai-portal
 npm install
-npm run build
-npx netlify deploy --build --prod
 ```
 
-## Environment variables
+### 2. Create a Neon database
 
-Copy `.env.example` into Netlify environment variables.
+1. Go to [neon.tech](https://neon.tech) → New project
+2. Copy the **Connection string** (looks like `postgresql://user:pass@ep-xxx.neon.tech/neondb`)
 
-Minimum required for first deploy:
+### 3. Set up environment variables
 
-```txt
-DATABASE_URL=your Neon connection string
-ADMIN_API_KEY=long random dashboard key
-SETUP_SECRET=long random one-time setup key
-ALLOW_MOCK_PROVIDERS=true
-DEFAULT_TEAM_ID=00000000-0000-0000-0000-000000000001
-PUBLIC_SITE_URL=https://your-site.netlify.app
+```bash
+cp .env.example .env
+# Edit .env and fill in your real keys
 ```
 
-After deploy:
+### 4. Run database migrations
 
-1. Open the app.
-2. Paste `ADMIN_API_KEY` and `SETUP_SECRET` into the setup card.
-3. Click **Run DB Setup**.
-4. Click **Refresh**.
-5. Run the sample autopilot flow.
-
-## Real provider setup
-
-### Ollama
-
-Netlify cannot run Ollama directly. Host the `ollama-worker` folder on a VPS, Railway, Fly, Render, or any machine that can reach your Ollama process. Then set:
-
-```txt
-OLLAMA_API_URL=https://your-worker.example.com/generate
-OLLAMA_API_KEY=your-worker-secret
-OLLAMA_MODEL=llama3.1:8b
+```bash
+npm run db:migrate
 ```
 
-### Sendblue
+This creates all tables and seeds built-in skills and starter templates.
 
-Set:
+### 5. Install and start Ollama
 
-```txt
-SENDBLUE_API_KEY_ID=
-SENDBLUE_API_SECRET_KEY=
-SENDBLUE_FROM_NUMBER=+15555555555
-SENDBLUE_STATUS_CALLBACK_URL=https://your-site.netlify.app/api/sendblue-webhook
+```bash
+# Mac/Linux
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3.1
+ollama serve
 ```
 
-### Resend
+Ollama runs on `http://localhost:11434` by default.
 
-Set:
+> **Production tip**: Run Ollama on a VPS so it's always reachable.
+> ```bash
+> # On your VPS (Ubuntu)
+> curl -fsSL https://ollama.ai/install.sh | sh
+> ollama pull llama3.1
+> OLLAMA_HOST=0.0.0.0 ollama serve
+> ```
+> Then set `OLLAMA_BASE_URL=http://YOUR_VPS_IP:11434` in Netlify env vars.
 
-```txt
-RESEND_API_KEY=
-RESEND_FROM_EMAIL="Your Brokerage <noreply@yourdomain.com>"
+### 6. Run locally
+
+```bash
+npm install -g netlify-cli
+netlify dev
 ```
 
-### DocuSign
+Visit `http://localhost:8888`
 
-For production, use broker-approved templates. The included DocuSign wrapper can create an envelope from `DOCUSIGN_TEMPLATE_ID`, or it can create a placeholder HTML document in mock/demo mode.
+---
 
-Set:
+## Deploy to Netlify
 
-```txt
-DOCUSIGN_BASE_URL=https://demo.docusign.net
-DOCUSIGN_ACCOUNT_ID=
-DOCUSIGN_ACCESS_TOKEN=
-DOCUSIGN_TEMPLATE_ID=
+### Option A: Netlify UI (easiest)
+
+1. Push this repo to GitHub
+2. Go to [netlify.com](https://netlify.com) → New site → Import from GitHub
+3. Build command: `npm run build`
+4. Publish directory: `dist`
+5. Add all environment variables from `.env.example` in **Site Settings → Environment Variables**
+6. Deploy!
+
+### Option B: CLI
+
+```bash
+netlify login
+netlify init
+netlify deploy --prod
 ```
 
-## API routes
+---
 
-All `/api/*` calls redirect to Netlify Functions.
+## Connect Bluesend webhook
 
-- `GET /api/health`
-- `POST /api/setup-db`
-- `GET|POST /api/leads`
-- `GET /api/dashboard`
-- `POST /api/run-autopilot`
-- `GET|POST /api/messages`
-- `POST /api/send-message`
-- `GET|PATCH|POST /api/tasks`
-- `POST /api/sendblue-webhook`
-- `POST /api/resend-webhook`
-- `GET /api/signing-requests`
-- `POST /api/create-signing-request`
-- `POST /api/signing-webhook`
-- `daily-summary` scheduled function
+Once deployed, go to your Bluesend dashboard and set the webhook URL to:
+```
+https://YOUR-SITE.netlify.app/.netlify/functions/inbound-message
+```
 
-## Safety defaults
+---
 
-- SMS auto-send requires `sms_consent_status = opted_in`.
-- Email send is blocked if lead opted out.
-- Legal/contract/fair-housing-sensitive language forces review.
-- AI decisions are stored in `ai_decisions`.
-- Every important action writes to `audit_log`.
-- Document signing requests require review by default.
+## Project structure
 
-## Next production hardening
+```
+zack-ai-portal/
+├── netlify/functions/          # Serverless API functions
+│   ├── lib/
+│   │   ├── db.js               # Neon database helpers
+│   │   ├── ai.js               # Ollama + Groq AI brain
+│   │   └── messaging.js        # Bluesend + Twilio + Resend
+│   ├── inbound-message.js      # ← Bluesend webhook (main intake)
+│   ├── run-workflow.js         # Workflow execution engine
+│   ├── dashboard.js            # Dashboard API
+│   └── clients.js              # Client CRUD API
+├── src/
+│   ├── pages/                  # React pages
+│   ├── components/             # Shared components
+│   └── styles/
+├── sql/
+│   ├── 001_schema.sql          # All database tables
+│   └── 002_seed.sql            # Built-in skills + templates
+├── .env.example                # All environment variables documented
+├── netlify.toml                # Netlify config
+└── README.md
+```
 
-Before selling this to agents/brokerages:
+---
 
-1. Replace browser-stored admin key with real auth.
-2. Finish DocuSign OAuth/JWT token refresh instead of static access tokens.
-3. Add signed webhook verification for each provider.
-4. Add object storage for completed PDFs.
-5. Add per-team multi-tenant auth and permissions.
-6. Add provider rate limits, retries, and queueing.
-7. Have brokerage counsel review templates, copy, and compliance rules.
+## Phase 2 (coming next)
+
+- [ ] Workflow builder UI (drag-and-drop steps canvas)
+- [ ] Browser skill recorder (Chrome extension)
+- [ ] Templates editor with `{{variable}}` preview
+- [ ] Skills library management page
+- [ ] DocuSign envelope creation from templates
+- [ ] Navica MLS browser skill
+
+---
+
+## Troubleshooting
+
+**AI not responding**: Check that Ollama is running (`ollama serve`) and `OLLAMA_BASE_URL` is correct. Set `GROQ_API_KEY` as a fallback.
+
+**Messages not coming in**: Verify the Bluesend webhook URL points to your live Netlify function URL (not localhost).
+
+**Database errors**: Make sure `DATABASE_URL` is set and you've run `npm run db:migrate`.

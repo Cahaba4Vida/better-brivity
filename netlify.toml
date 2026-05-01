@@ -3,12 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-  included_files = ["db/*.sql"]
-
-[functions."daily-summary"]
-  schedule = "0 16 * * *"
+[dev]
+  command = "npm run dev"
+  port = 5173
+  targetPort = 5173
 
 [[redirects]]
   from = "/api/*"
@@ -19,3 +17,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@neondatabase/serverless", "playwright-core"]
+
+[build.environment]
+  NODE_VERSION = "20"

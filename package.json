@@ -1,23 +1,29 @@
 {
-  "name": "real-estate-ai-autopilot-netlify",
-  "version": "0.2.0",
+  "name": "zack-ai-portal",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Netlify + Neon + Ollama real estate AI autopilot starter with Sendblue, Resend, and DocuSign hooks.",
   "scripts": {
-    "dev": "netlify dev",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check:functions": "find netlify/functions -name '*.mjs' -maxdepth 3 -print0 | xargs -0 -n1 node --check"
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^7.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "@neondatabase/serverless": "^0.9.4",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.414.0",
+    "clsx": "^2.1.1"
   },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.9"
   }
 }
